@@ -189,8 +189,10 @@ module OAuth
         # TODO this could be considered unexpected behavior; symbols or not?
         # TODO this also drops subsequent values from multi-valued keys
         CGI.parse(response.body).inject({}) do |h,(k,v)|
-          h[k.to_sym] = v.first
-          h[k]        = v.first
+          # Yahoo! puts spaces and a line break in access_token response...
+          _k = k.gsub(/\s/, '')
+          h[_k.to_sym] = v.first
+          h[_k]        = v.first
           h
         end
       when (300..399)

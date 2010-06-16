@@ -10,13 +10,25 @@ module OAuth::Signature
     attr_accessor :options
     attr_reader :token_secret, :consumer_secret, :request
 
-    def self.implements(signature_method)
-      OAuth::Signature.available_methods[signature_method] = self
+    def self.implements(signature_method = nil)
+      return @implements if signature_method.nil? 
+      @implements = signature_method
+      OAuth::Signature.available_methods[@implements] = self
     end
 
     def self.digest_class(digest_class = nil)
       return @digest_class if digest_class.nil?
       @digest_class = digest_class
+    end
+    
+    def self.digest_klass(digest_klass = nil)
+      return @digest_klass if digest_klass.nil?
+      @digest_klass = digest_klass
+    end
+
+    def self.hash_class(hash_class = nil)
+      return @hash_class if hash_class.nil?
+      @hash_class = hash_class
     end
 
     def initialize(request, options = {}, &block)
@@ -38,7 +50,6 @@ module OAuth::Signature
       # presence of :token_secret option will override any Token that's provided
       @token_secret = options[:token_secret] if options[:token_secret]
 
-
       # override secrets based on the values returned from the block (if any)
       if block_given?
         # consumer secret and token secret need to be looked up based on pieces of the request
@@ -55,7 +66,7 @@ module OAuth::Signature
     end
 
     def ==(cmp_signature)
-      secure_equals(Base64.decode64(signature), Base64.decode64(cmp_signature))
+      Base64.decode64(signature) == Base64.decode64(cmp_signature)
     end
 
     def verify
@@ -64,6 +75,14 @@ module OAuth::Signature
 
     def signature_base_string
       request.signature_base_string
+    end
+
+    def body_hash
+      if self.class.hash_class
+        Base64.encode64(self.class.hash_class.digest(request.body || '')).chomp.gsub(/\n/,'')
+      else
+        nil # no body hash algorithm defined, so don't generate one
+      end
     end
 
   private
